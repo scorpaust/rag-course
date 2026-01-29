@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MDN RAG Chatbot
+
+A RAG-powered chatbot application that answers developer questions using MDN Web Docs as the authoritative knowledge source. Built with Next.js, TypeScript, and Tailwind CSS.
+
+## Features
+
+- Documentation-first AI chat experience
+- Strong emphasis on citations and transparency
+- Property-based testing for correctness guarantees
+- Responsive design for desktop, tablet, and mobile
+- Dark and light theme support
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+ and npm
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+### Development
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run tests:
+
+```bash
+npm test
+```
+
+Run tests in watch mode:
+
+```bash
+npm run test:watch
+```
+
+Run tests with coverage:
+
+```bash
+npm run test:coverage
+```
+
+### Code Quality
+
+Format code with Prettier:
+
+```bash
+npm run format
+```
+
+Check code formatting:
+
+```bash
+npm run format:check
+```
+
+Lint code:
+
+```bash
+npm run lint
+```
+
+## Project Structure
+
+```
+.
+├── app/              # Next.js app directory (pages, layouts, API routes)
+├── components/       # React components
+├── types/            # TypeScript type definitions
+├── utils/            # Utility functions
+├── lib/              # Library code and API clients
+└── public/           # Static assets
+```
+
+## Technology Stack
+
+- **Framework**: Next.js 16+ (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Testing**: Jest, React Testing Library, fast-check
+- **Code Quality**: ESLint, Prettier
+
+## Type Definitions
+
+Core types are defined in the `types/` directory:
+
+- `Message`: Chat messages from user or assistant
+- `Citation`: References to MDN documents
+- `ChatSession`: Chat session with message history
+- `Theme`: Theme configuration (colors, typography)
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [fast-check Documentation](https://fast-check.dev/)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is for educational purposes.

@@ -1,0 +1,45 @@
+.messageList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+}
+
+.messageListInner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: min-content;
+}
+
+.messageWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+.messageList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messageList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messageList::-webkit-scrollbar-thumb {
+  background: var(--color-border, #e1e4e8);
+  border-radius: 4px;
+}
+
+.messageList::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary, #5e5e5e);
+}
+
+/* Firefox scrollbar */
+.messageList {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border, #e1e4e8) transparent;
+}
