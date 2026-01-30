@@ -70,3 +70,22 @@
   color: var(--color-text-secondary);
   font-size: 14px;
 }
+
+.chatContainer {
+  margin-top: 32px;
+  width: 100%;
+  max-width: 800px;
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.chatMessagesWrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}

@@ -6,3 +6,6 @@ export { ThemeProvider, useTheme } from './ThemeProvider';
 export { MessageList } from './MessageList';
 export { UserMessage } from './UserMessage';
 export { AIMessage } from './AIMessage';
+
+// Input components
+export { InputComposer } from './InputComposer';

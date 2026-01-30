@@ -54,7 +54,7 @@ This implementation plan breaks down the MDN RAG Chatbot into discrete, incremen
     - Add message metadata display (processing time, confidence)
     - _Requirements: 1.3, 1.4_
 
-  - [ ] 3.5 Write property tests for message display
+- [x] 3.5 Write property tests for message display
     - **Property 1: Message Display Consistency**
     - **Property 2: Content Type Rendering**
     - **Validates: Requirements 1.1, 1.3, 1.4**
