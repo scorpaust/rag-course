@@ -13,6 +13,104 @@
   font-size: 14px;
 }
 
+.navList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navListItem {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navSessionButton {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.navMessageTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navMessageMeta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.navDeleteButton {
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.navDeleteAllButton {
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  padding: 4px 0;
+}
+
+.citationList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.citationListItem {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 12px;
+}
+
+.citationLink {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.citationLink:hover {
+  text-decoration: underline;
+}
+
+.citationExcerpt {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.citationMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: flex;
+  gap: 8px;
+}
+
 .mainContainer {
   display: flex;
   flex-direction: column;

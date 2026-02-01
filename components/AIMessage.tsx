@@ -46,9 +46,12 @@ export function AIMessage({ message, onCitationClick }: AIMessageProps) {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              // Custom paragraph renderer
+              // Custom block-level paragraph renderer
+              // Use a <div> instead of <p> so that block elements like <pre>
+              // from fenced code blocks never end up nested inside a <p>,
+              // which would be invalid HTML and cause React hydration errors.
               p: ({ children }) => (
-                <p className={styles.paragraph}>{children}</p>
+                <div className={styles.paragraph}>{children}</div>
               ),
 
               // Custom code block renderer
