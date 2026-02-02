@@ -8,17 +8,18 @@ A Retrieval-Augmented Generation (RAG) chatbot that answers developer questions 
 
 ### Chat experience
 - Documentation-first AI chat UI, designed for MDN-style answers
-- Placeholder `/api/chat` route today (returns deterministic mock answers)
-- Components and data types already structured for:
-  - Inline citations
-  - Citation side panel
-  - Message metadata (model, latency, confidence)
+- Production-ready `/api/chat` route backed by MDN-grounded RAG
+- Inline citations and citation side panel wired to real MDN chunks
+- Message metadata (model, latency, confidence) returned from the API
+- Chat sessions persisted in Postgres so conversations can be revisited
 
 ### RAG / retrieval backend
 - Postgres with **pgvector** for semantic search over MDN chunks
 - `documents` + `chunks` tables managed via Drizzle ORM
 - Embeddings created from `chunks.json` and stored in the `embedding` vector column
 - Semantic search using pgvector `<->` distance on the `embedding` column
+- Hybrid ranking that combines BM25 keyword relevance with vector similarity
+- Optional LLM-based re-ranking on the top hybrid candidates for better grounding
 
 ### Embeddings
 - Uses **Voyage** embeddings by default (e.g. `voyage-3-large`)
@@ -217,13 +218,17 @@ Then visit:
 
 ### Current backend behavior
 
-- The `app/api/chat/route.ts` endpoint currently returns a **deterministic mock answer**.
-- It validates the question (non-empty, length limits) and returns:
-  - A canned MDN-themed answer
-  - Mock citation data
-- This keeps the UI functional while you iterate on the RAG backend.
+- The `app/api/chat/route.ts` endpoint now runs the **full RAG pipeline**.
+- It validates the question (non-empty, length limits) and then:
+  - Embeds the question using Voyage (with a deterministic local fallback on rate limits / billing issues)
+  - Retrieves candidate chunks from Postgres using pgvector `<->` distance
+  - Applies hybrid BM25 + vector ranking (see `lib/search/hybrid.ts`)
+  - Optionally re-ranks the top candidates with an LLM if `OPENAI_API_KEY` is configured
+  - Builds an MDN-grounded answer using the Vercel AI SDK (or falls back to the top chunk content)
+  - Persists the user and assistant messages, plus their citations, in `chatSessions`, `messages`, and `messageCitations`
+- The response includes the assistant message, its MDN citations, and the `sessionId` so the UI can continue the conversation.
 
-You can use the CLI scripts (`ask` and `ask:llm`) as the reference implementation for wiring real retrieval + LLM into `/api/chat` when you are ready.
+The CLI scripts (`ask` and `ask:llm`) remain useful for debugging retrieval and end-to-end RAG behavior from the command line.
 
 ---
 

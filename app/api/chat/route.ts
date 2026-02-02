@@ -6,6 +6,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { db } from '@/lib/db/client';
 import { chatSessions, messages, messageCitations } from '@/lib/db/schema';
+import { hybridRank, type CandidateChunk } from '@/lib/search/hybrid';
 
 export const runtime = 'nodejs';
 
@@ -179,6 +180,82 @@ function buildContextFromChunks(rows: RetrievedChunkRow[]): string {
     .join('\n\n---\n\n');
 }
 
+type RerankableChunk = CandidateChunk & {
+  hybridScore: number;
+};
+
+async function rerankWithLlm(
+  question: string,
+  candidates: RerankableChunk[],
+): Promise<(RerankableChunk & { rerankScore: number })[]> {
+  // If no LLM client is configured, fall back to hybrid scores.
+  if (!openai) {
+    return candidates.map((c) => ({ ...c, rerankScore: c.hybridScore }));
+  }
+
+  if (candidates.length === 0) return [];
+
+  const snippets = candidates.map((c, idx) => {
+    const contentSnippet = c.content.replace(/\s+/g, ' ').slice(0, 600);
+    return [
+      `Chunk ${idx + 1} (id: ${c.id}):`,
+      `Title: ${c.title}`,
+      c.heading ? `Heading: ${c.heading}` : null,
+      `Source: ${c.source} (chunk #${c.chunkIndex})`,
+      '',
+      contentSnippet,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  });
+
+  const prompt = [
+    'You are a specialized re-ranking model. Your task is to rank document chunks by how useful they are for answering the given question.',
+    'Consider semantic relevance, specificity, and how directly each chunk helps answer the question.',
+    'Return a JSON array of objects of the form { "id": string, "score": number } where higher score means more relevant.',
+    'Only use chunk IDs that are provided. Do not invent new IDs.',
+    '',
+    `Question: ${question}`,
+    '',
+    'Chunks:',
+    snippets.join('\n\n---\n\n'),
+  ].join('\n');
+
+  try {
+    const result = await generateText({
+      model: openai(openaiModelId),
+      prompt,
+    });
+
+    const text = result.text.trim();
+
+    // Try to locate a JSON array in the model output.
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    const jsonText = jsonMatch ? jsonMatch[0] : text;
+
+    const parsed = JSON.parse(jsonText) as { id: string; score: number }[];
+    const scoreById = new Map<string, number>();
+    for (const item of parsed) {
+      if (typeof item?.id === 'string' && typeof item?.score === 'number') {
+        scoreById.set(item.id, item.score);
+      }
+    }
+
+    // If parsing yielded no usable scores, fall back to hybrid.
+    if (!scoreById.size) {
+      return candidates.map((c) => ({ ...c, rerankScore: c.hybridScore }));
+    }
+
+    return candidates.map((c) => ({
+      ...c,
+      rerankScore: scoreById.get(c.id) ?? c.hybridScore,
+    }));
+  } catch (error) {
+    console.warn('Re-ranking with LLM failed, falling back to hybrid scores:', error);
+    return candidates.map((c) => ({ ...c, rerankScore: c.hybridScore }));
+  }
+}
+
 async function askLlmWithContext(question: string, rows: RetrievedChunkRow[]): Promise<{
   answer: string;
   usedLlm: boolean;
@@ -220,17 +297,15 @@ async function askLlmWithContext(question: string, rows: RetrievedChunkRow[]): P
   };
 }
 
-function buildCitations(rows: RetrievedChunkRow[]): Citation[] {
-  if (!rows.length) return [];
-
+function buildCitations(
+  ranked: (CandidateChunk & { hybridScore: number; rerankScore?: number }),
+  allRanked: (CandidateChunk & { hybridScore: number; rerankScore?: number })[],
+): Citation[] {
   const now = new Date();
 
-  return rows.map((row) => {
+  return allRanked.map((row) => {
     const snippet = row.content.replace(/\s+/g, ' ').slice(0, 280);
     const mdnUrl = `https://developer.mozilla.org/en-US/docs/${row.slug}`;
-
-    // Convert pgvector distance into a relevance score in [0, 1].
-    const relevanceScore = 1 / (1 + Math.max(0, row.distance ?? 0));
 
     const citation: Citation = {
       id: row.id,
@@ -240,7 +315,8 @@ function buildCitations(rows: RetrievedChunkRow[]): Citation[] {
       excerpt: snippet,
       lastUpdated: now,
       trustLevel: 'direct',
-      relevanceScore,
+      // Prefer the LLM re-rank score when available, otherwise fall back to hybrid.
+      relevanceScore: row.rerankScore ?? row.hybridScore,
     };
 
     return citation;
@@ -384,8 +460,8 @@ export async function POST(req: Request) {
       throw new Error('Failed to generate embedding for question');
     }
 
-    // 2) Retrieve top chunks from Postgres via pgvector
-    const rows = await retrieveRelevantChunks(client, questionEmbedding, 5);
+    // 2) Retrieve top chunks from Postgres via pgvector as a coarse filter
+    const rows = await retrieveRelevantChunks(client, questionEmbedding, 10);
 
     if (!rows.length) {
       return NextResponse.json(
@@ -396,10 +472,43 @@ export async function POST(req: Request) {
       );
     }
 
-    const citations = buildCitations(rows);
+    // 3) Apply BM25 + pgvector hybrid ranking on the retrieved candidates
+    const candidates: CandidateChunk[] = rows.map((row) => ({
+      id: row.id,
+      content: row.content,
+      heading: row.heading,
+      chunkIndex: row.chunk_index,
+      title: row.title,
+      slug: row.slug,
+      source: row.source,
+      distance: Number(row.distance ?? 0),
+    }));
 
-    // 3) Ask the LLM with retrieved context (or fall back to top chunk content)
-    const { answer, usedLlm } = await askLlmWithContext(question, rows);
+    const ranked = hybridRank(question, candidates, 0.6); // slightly favor BM25
+    const topRankedHybrid = ranked.slice(0, 5);
+
+    // 4) Use a specialized LLM-based re-ranker on the top hybrid candidates
+    const reranked = await rerankWithLlm(question, topRankedHybrid);
+    const topRanked = reranked
+      .slice()
+      .sort((a, b) => (b.rerankScore ?? b.hybridScore) - (a.rerankScore ?? a.hybridScore));
+
+    const citations = buildCitations(topRanked[0], topRanked);
+
+    // 5) Ask the LLM with re-ranked context (or fall back to top chunk content)
+    const { answer, usedLlm } = await askLlmWithContext(
+      question,
+      topRanked.map((r) => ({
+        id: r.id,
+        content: r.content,
+        heading: r.heading,
+        chunk_index: r.chunkIndex,
+        title: r.title,
+        slug: r.slug,
+        source: r.source,
+        distance: r.distance,
+      })),
+    );
 
     const processingTime = Date.now() - startedAt;
 
